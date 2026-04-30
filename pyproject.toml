@@ -1,0 +1,19 @@
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.pylint.main]
+source-roots = ["."]
+
+[tool.pylint.messages_control]
+disable = [
+    "C0114", "C0115", "C0116",
+    "R0912", "R0913", "R0914", "R0915", "R0916", "R0917", "R0911",
+    "R0902",
+    "W0718",
+    "R0801",
+    "C0415",
+]
+
+[tool.pylint.format]
+max-line-length = 100
