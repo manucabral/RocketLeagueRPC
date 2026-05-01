@@ -1,0 +1,78 @@
+name: Idea / Feature Request
+description: Suggest an idea or improvement for Rocket League RPC
+labels: ["enhancement", "idea"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share your idea for improving Rocket League RPC.
+        Please check existing issues first to avoid duplicates.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Idea summary
+      description: Briefly describe your idea.
+      placeholder: Add support for custom Discord Rich Presence text presets per game mode.
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What problem would this solve, or what workflow would it improve?
+      placeholder: I want to switch between casual and competitive presence setups more quickly.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed solution
+      description: Describe how you think this could work.
+      placeholder: Add a quick preset selector in the UI and allow one-click switching.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Related area
+      description: Which part of the app is this idea related to?
+      options:
+        - Discord RPC
+        - Rocket League tracker
+        - Live match view
+        - Frontend / UI
+        - CLI
+        - Presets / settings
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Importance
+      description: How important is this idea for your use case?
+      options:
+        - Nice to have
+        - Useful improvement
+        - Important
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Have you considered any workaround or alternative approach?
+      placeholder: Right now I manually change the settings each time.
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add mockups, examples, references, or extra details if helpful.
