@@ -25,6 +25,20 @@ The lastest release is available [here](https://github.com/manucabral/RocketLeag
 - Presence presets (list, save, load, delete).
 - Reconnect with retries at startup.
 
+## Important Setup
+Before using Rocket League RPC, you need to enable the Rocket League Stats API.
+
+Open:
+`<Rocket League Install Dir>\TAGame\Config\DefaultStatsAPI.ini`
+
+Make sure it contains at least:
+
+- `PacketSendRate=1`
+- `Port=49123`
+
+After updating the file, restart Rocket League so the changes take effect.
+
+
 ## Requirements
 
 > Python 3.12
