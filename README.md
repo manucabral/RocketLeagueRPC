@@ -36,6 +36,12 @@ pip install -r requirements.txt
 python main.py
 ```
 
+## Demo
+<p align="center">
+<img width="700"  alt="image" src="https://github.com/user-attachments/assets/634eaa2c-cf72-4158-9e0f-5b66acf981ff" />
+</p>
+
+
 ## RoadMap
 - [ ] Add map images to Rich Presence image assets.
 - [ ] Add more presence fields (rank, playlist, etc.).
