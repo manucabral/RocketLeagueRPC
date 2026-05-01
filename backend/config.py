@@ -22,7 +22,7 @@ class Config:
     development_mode: bool = env_bool("DEVELOPMENT_MODE", False)
 
     project_root: Path = Path(__file__).resolve().parent.parent
-    frontend_dist_dir: Path = project_root / "frontend" / "dist"
+    frontend_dist_dir: Path = project_root / "frontend"
 
     @property
     def data_dir(self) -> Path:
