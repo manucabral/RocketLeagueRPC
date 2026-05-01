@@ -9,6 +9,13 @@
 Desktop application to show real-time Rocket League data in Discord Rich Presence using Stats API.
 </p>
 
+> [!IMPORTANT]  
+> Currently in the early development phase. Please take this into consideration.
+
+> Only compatible with Microsoft Windows systems.
+
+# Download
+The lastest release is available [here](https://github.com/manucabral/RichPresencePlus/releases)
 
 ## Features
 - Live connection status for Tracker and Discord.
