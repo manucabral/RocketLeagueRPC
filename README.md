@@ -17,3 +17,34 @@ Desktop application to show real-time Rocket League data in Discord Rich Presenc
 - Granular configuration of visible presence fields.
 - Presence presets (list, save, load, delete).
 - Reconnect with retries at startup.
+
+## Requirements
+
+> Python 3.12
+- `pywebview`
+- `rlstatsapi`
+
+## Installation
+
+```bash
+pip install -r requirements.txt
+```
+
+## Usage
+
+```bash
+python main.py
+```
+
+## RoadMap
+- [ ] Add map images to Rich Presence image assets.
+- [ ] Add more presence fields (rank, playlist, etc.).
+- [ ] Create a faster version without webview.
+And more to come.
+
+## Contributing
+Contributions are welcome. Please fork the repository and submit a pull request.
+
+## License
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
