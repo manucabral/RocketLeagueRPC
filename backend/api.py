@@ -1,6 +1,7 @@
 """
 Main API class.
 """
+
 from typing import Any
 
 from .app_coordinator import AppCoordinator
@@ -88,9 +89,7 @@ class Api:
         Returns:
             A dict with ``"name"`` and ``"config"`` keys for the saved preset.
         """
-        return self._coordinator.save_presence_preset(
-            name=name, cfg=cfg, overwrite=overwrite
-        )
+        return self._coordinator.save_presence_preset(name=name, cfg=cfg, overwrite=overwrite)
 
     def load_presence_preset(self, name: str) -> dict[str, Any]:
         """Load a saved preset, apply it as the active config, and return live state.
