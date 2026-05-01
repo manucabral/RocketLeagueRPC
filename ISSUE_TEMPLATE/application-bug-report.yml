@@ -1,0 +1,126 @@
+name: Application Bug Report
+description: Report a bug related to Rocket League RPC
+labels: ["bug", "application"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check whether this bug has already been reported before opening a new issue.
+        If you find an existing report, add your details there instead of creating a duplicate.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Bug summary
+      description: Briefly describe the problem.
+      placeholder: The app starts, but the window never opens and exits after a few seconds.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List the exact steps needed to reproduce the issue.
+      placeholder: |
+        1. Open Rocket League RPC
+        2. Start Rocket League
+        3. Wait for the app to connect to Discord
+        4. See the error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: Describe what you expected to happen.
+      placeholder: The app should open normally and update Discord Rich Presence.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual behavior
+      description: Describe what actually happened instead.
+      placeholder: The app closes immediately after startup and no Rich Presence is shown.
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: What version of Rocket League RPC are you running?
+      placeholder: v0.0.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: run-mode
+    attributes:
+      label: Run mode
+      description: How were you running the app when the bug happened?
+      options:
+        - Desktop app build (.exe)
+        - Python source (main.py)
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: bug-area
+    attributes:
+      label: Affected area
+      description: Which part of the app seems to be affected?
+      options:
+        - App startup
+        - Frontend / window
+        - Discord RPC
+        - Rocket League tracker
+        - Live match data
+        - Presets / settings
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: discord-version
+    attributes:
+      label: Discord version
+      description: What Discord desktop version are you using?
+      placeholder: Stable 1.0.x
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: Which operating system are you using?
+      placeholder: Windows 11 Pro 23H2
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or recordings
+      description: Add screenshots, recordings, or visible error messages if available.
+
+  - type: textarea
+    id: additional-comments
+    attributes:
+      label: Additional comments
+      description: Add any extra context that may help reproduce or diagnose the issue.
+
+  - type: textarea
+    id: logfile
+    attributes:
+      label: App log
+      description: Paste the relevant log output from the application log file.
+      placeholder: |
+        Default log location:
+        C:\Users\<your-user>\.rocketleaguerpc\logs\app.log
+    validations:
+      required: true
