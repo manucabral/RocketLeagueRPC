@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <title>Rocket League RPC</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            rl: {
+              bg:       '#06060f',
+              panel:    '#0d0d1a',
+              border:   '#1a1a2e',
+              blue:     '#1B8FFF',
+              blueGlow: '#00BFFF',
+              orange:   '#FF6B00',
+              orangeGlow:'#FF8C00',
+              neon:     '#00E5FF',
+              muted:    '#4a5568',
+              text:     '#e2e8f0',
+              dim:      '#94a3b8',
+            }
+          },
+          fontFamily: {
+            rl: ['"Rajdhani"', '"Orbitron"', 'ui-sans-serif', 'system-ui'],
+          },
+          boxShadow: {
+            blue:   '0 0 12px #1B8FFF66, 0 0 32px #1B8FFF22',
+            orange: '0 0 12px #FF6B0066, 0 0 32px #FF6B0022',
+            neon:   '0 0 8px #00E5FF88',
+          },
+          animation: {
+            pulse_slow: 'pulse 3s cubic-bezier(0.4,0,0.6,1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { background-color: #06060f; color: #e2e8f0; font-family: 'Rajdhani', sans-serif; }
+
+    .rl-heading { font-family: 'Orbitron', sans-serif; }
+
+    /* Clip-path angular panels */
+    .panel-clip {
+      clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+    }
+
+    /* Neon border glow */
+    .border-blue-glow { box-shadow: 0 0 12px #1B8FFF55, inset 0 0 12px #1B8FFF11; }
+    .border-orange-glow { box-shadow: 0 0 12px #FF6B0055, inset 0 0 12px #FF6B0011; }
+
+    /* Button styles */
+    .btn-blue {
+      background: linear-gradient(135deg, #1B8FFF22 0%, #1B8FFF44 100%);
+      border: 1px solid #1B8FFF;
+      color: #00E5FF;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    }
+    .btn-blue:hover {
+      background: linear-gradient(135deg, #1B8FFF55 0%, #1B8FFF88 100%);
+      box-shadow: 0 0 16px #1B8FFF88;
+    }
+    .btn-orange {
+      background: linear-gradient(135deg, #FF6B0022 0%, #FF6B0044 100%);
+      border: 1px solid #FF6B00;
+      color: #FF8C00;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    }
+    .btn-orange:hover {
+      background: linear-gradient(135deg, #FF6B0055 0%, #FF6B0088 100%);
+      box-shadow: 0 0 16px #FF6B0088;
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid #2d3748;
+      color: #94a3b8;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+    .btn-ghost:hover {
+      border-color: #4a5568;
+      color: #e2e8f0;
+    }
+
+    /* Section divider line */
+    .section-line {
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, #1B8FFF 40%, #FF6B00 60%, transparent 100%);
+    }
+
+    /* Status dot */
+    .dot-on  { background: #22c55e; box-shadow: 0 0 8px #22c55e; border-radius: 50%; }
+    .dot-off { background: #ef4444; box-shadow: 0 0 8px #ef4444; border-radius: 50%; }
+    .dot-wait{ background: #eab308; box-shadow: 0 0 8px #eab308; border-radius: 50%; }
+
+    /* Pre / debug */
+    pre {
+      font-family: 'Courier New', monospace;
+      font-size: 0.72rem;
+      color: #4ade80;
+      background: #050510;
+      border: 1px solid #1a2a1a;
+      padding: 0.75rem;
+      border-radius: 4px;
+      max-height: 160px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    /* Input */
+    input[type="text"], select {
+      background: #0d0d1a;
+      border: 1px solid #1B8FFF55;
+      color: #e2e8f0;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 0.4rem 0.75rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input[type="text"]:focus, select:focus {
+      border-color: #1B8FFF;
+      box-shadow: 0 0 8px #1B8FFF44;
+    }
+    select option { background: #0d0d1a; }
+
+    /* Scoreboard */
+    .score-block {
+      min-width: 80px;
+      text-align: center;
+    }
+
+    /* Feature toggle checkboxes */
+    input[type="checkbox"] { accent-color: #1B8FFF; width: 16px; height: 16px; }
+
+    /* Details/summary */
+    details > summary {
+      cursor: pointer;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #4a5568;
+      padding: 0.5rem 0;
+      user-select: none;
+    }
+    details > summary:hover { color: #94a3b8; }
+    details[open] > summary { color: #1B8FFF; }
+
+    /* Animated border top */
+    .panel-top-blue  { border-top: 2px solid #1B8FFF; }
+    .panel-top-orange{ border-top: 2px solid #FF6B00; }
+    .panel-top-neon  { border-top: 2px solid #00E5FF; }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+  <!-- Background decorative elements -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden">
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[1px] bg-gradient-to-r from-transparent via-rl-blue to-transparent opacity-40"></div>
+    <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[1px] bg-gradient-to-r from-transparent via-rl-orange to-transparent opacity-30"></div>
+    <div class="absolute top-1/4 -left-32 w-64 h-64 rounded-full bg-rl-blue opacity-[0.03] blur-3xl"></div>
+    <div class="absolute bottom-1/4 -right-32 w-64 h-64 rounded-full bg-rl-orange opacity-[0.03] blur-3xl"></div>
+  </div>
+
+  <main class="relative max-w-2xl mx-auto space-y-4">
+
+    <!-- Header -->
+    <header class="text-center py-6 pb-4">
+      <div class="section-line mb-6"></div>
+      <h1 id="app-name" class="rl-heading text-4xl md:text-5xl font-black tracking-widest text-white uppercase"
+          style="text-shadow: 0 0 30px #1B8FFF66, 0 0 60px #1B8FFF22;">
+        ROCKET LEAGUE
+      </h1>
+      <p class="rl-heading text-sm tracking-[0.4em] text-rl-orange mt-1 font-bold uppercase">Discord Rich Presence</p>
+      <p id="app-version" class="text-rl-muted text-xs tracking-widest mt-2 font-mono">v0.0.0</p>
+      <div class="section-line mt-6"></div>
+    </header>
+
+    <!-- Connection -->
+    <section class="bg-rl-panel border border-rl-border panel-clip panel-top-blue border-blue-glow p-5">
+      <h2 class="rl-heading text-xs font-bold tracking-[0.3em] text-rl-blue uppercase mb-4 flex items-center gap-2">
+        <span class="w-4 h-[1px] bg-rl-blue inline-block"></span>
+        Connection
+        <span class="flex-1 h-[1px] bg-rl-border"></span>
+      </h2>
+
+      <div class="space-y-4">
+        <!-- Tracker -->
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div class="flex items-center gap-3">
+            <div id="_tracker-dot" class="w-2 h-2 dot-off"></div>
+            <span class="text-rl-dim text-sm font-semibold uppercase tracking-wider">Tracker</span>
+            <strong id="tracker-status" class="text-white text-sm">Unknown</strong>
+          </div>
+          <button id="tracker-toggle" class="btn-blue px-4 py-2 text-sm cursor-pointer">Connect Tracker</button>
+        </div>
+
+        <div class="h-[1px] bg-rl-border"></div>
+
+        <!-- Discord -->
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div class="flex items-center gap-3">
+            <div id="_discord-dot" class="w-2 h-2 dot-off"></div>
+            <span class="text-rl-dim text-sm font-semibold uppercase tracking-wider">Discord</span>
+            <strong id="discord-status" class="text-white text-sm">Unknown</strong>
+          </div>
+          <div class="flex gap-2">
+            <button id="discord-toggle" class="btn-blue px-4 py-2 text-sm cursor-pointer">Connect RPC</button>
+            <button id="discord-debug" class="btn-ghost px-3 py-2 text-xs cursor-pointer rounded-none">Debug IPC</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Discord RPC Preview -->
+    <section class="bg-rl-panel border border-rl-border panel-clip panel-top-neon p-5"
+             style="box-shadow: 0 0 12px #00E5FF22;">
+      <h2 class="rl-heading text-xs font-bold tracking-[0.3em] text-rl-neon uppercase mb-4 flex items-center gap-2">
+        <span class="w-4 h-[1px] bg-rl-neon inline-block"></span>
+        Live Discord Preview
+        <span class="flex-1 h-[1px] bg-rl-border"></span>
+      </h2>
+
+      <!-- Discord card mockup -->
+      <div class="bg-[#111827] border border-[#374151] rounded p-4 flex items-start gap-4">
+        <!-- Icon -->
+        <div class="w-14 h-14 rounded-lg flex-shrink-0 flex items-center justify-center text-2xl"
+             style="background: linear-gradient(135deg,#1B8FFF33,#FF6B0033); border: 1px solid #1B8FFF44;">
+          🚀
+        </div>
+        <!-- Text -->
+        <div class="flex-1 min-w-0">
+          <p id="rpc-title" class="font-bold text-white text-sm truncate">Rocket League</p>
+          <p id="rpc-state" class="text-rl-dim text-xs mt-0.5">Waiting</p>
+          <p id="rpc-details" class="text-rl-dim text-xs mt-0.5">Ready for the next match.</p>
+          <p id="rpc-time" class="text-rl-blue text-xs mt-2 font-mono">00:00 elapsed</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Presence Features -->
+    <section class="bg-rl-panel border border-rl-border panel-clip panel-top-blue p-5">
+      <h2 class="rl-heading text-xs font-bold tracking-[0.3em] text-rl-blue uppercase mb-4 flex items-center gap-2">
+        <span class="w-4 h-[1px] bg-rl-blue inline-block"></span>
+        Presence Features
+        <span class="flex-1 h-[1px] bg-rl-border"></span>
+      </h2>
+      <div id="features" class="grid grid-cols-2 gap-3 text-sm"></div>
+      <p id="sync-status" class="text-rl-neon text-xs font-semibold mt-3 tracking-widest uppercase">Synced</p>
+    </section>
+
+    <!-- Presets -->
+    <section class="bg-rl-panel border border-rl-border panel-clip p-5">
+      <h2 class="rl-heading text-xs font-bold tracking-[0.3em] text-rl-dim uppercase mb-4 flex items-center gap-2">
+        <span class="w-4 h-[1px] bg-rl-muted inline-block"></span>
+        Presets
+        <span class="flex-1 h-[1px] bg-rl-border"></span>
+      </h2>
+
+      <div class="flex gap-2 mb-3 flex-wrap">
+        <input id="preset-name" type="text" placeholder="Preset name"
+               class="flex-1 min-w-[140px] rounded-none text-sm" />
+        <button id="preset-save" class="btn-blue px-4 py-2 text-sm cursor-pointer">Save</button>
+        <button id="preset-overwrite" class="btn-ghost px-4 py-2 text-sm cursor-pointer rounded-none">Overwrite</button>
+      </div>
+
+      <div class="flex gap-2 flex-wrap">
+        <select id="preset-select" class="flex-1 min-w-[140px] rounded-none text-sm cursor-pointer"></select>
+        <button id="preset-load" class="btn-blue px-4 py-2 text-sm cursor-pointer">Load</button>
+        <button id="preset-delete" class="btn-orange px-4 py-2 text-sm cursor-pointer">Delete</button>
+      </div>
+
+      <p id="preset-status" class="text-rl-muted text-xs mt-3 tracking-wider">No presets loaded</p>
+    </section>
+
+    <!-- Live Match -->
+    <section class="bg-rl-panel border border-rl-border panel-clip panel-top-orange border-orange-glow p-5">
+      <h2 class="rl-heading text-xs font-bold tracking-[0.3em] text-rl-orange uppercase mb-4 flex items-center gap-2">
+        <span class="w-4 h-[1px] bg-rl-orange inline-block"></span>
+        Live Match
+        <span class="flex-1 h-[1px] bg-rl-border"></span>
+      </h2>
+
+      <!-- Scoreboard -->
+      <div class="flex items-center justify-center gap-2 mb-5">
+        <!-- Orange team -->
+        <div class="score-block">
+          <div class="text-xs text-rl-orange font-bold tracking-widest uppercase mb-1">Orange</div>
+          <div id="score-orange" class="rl-heading text-5xl font-black text-rl-orange"
+               style="text-shadow: 0 0 20px #FF6B0088;">0</div>
+        </div>
+
+        <!-- Divider + timer -->
+        <div class="flex flex-col items-center px-4">
+          <div class="rl-heading text-rl-dim text-2xl font-light mb-1">—</div>
+          <div id="match-timer" class="rl-heading text-xl font-bold text-white tracking-widest">0:00</div>
+        </div>
+
+        <!-- Blue team -->
+        <div class="score-block">
+          <div class="text-xs text-rl-blue font-bold tracking-widest uppercase mb-1">Blue</div>
+          <div id="score-blue" class="rl-heading text-5xl font-black text-rl-blue"
+               style="text-shadow: 0 0 20px #1B8FFF88;">0</div>
+        </div>
+      </div>
+
+      <!-- Match info grid -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-rl-bg border border-rl-border rounded p-3">
+          <div class="text-xs text-rl-muted uppercase tracking-wider mb-1 font-semibold">Arena</div>
+          <strong id="match-arena" class="text-white text-sm font-bold">Rocket League</strong>
+        </div>
+        <div class="bg-rl-bg border border-rl-border rounded p-3">
+          <div class="text-xs text-rl-muted uppercase tracking-wider mb-1 font-semibold">Mode</div>
+          <strong id="match-mode" class="text-white text-sm font-bold">Awaiting data</strong>
+        </div>
+        <div class="col-span-2 bg-rl-bg border border-rl-border rounded p-3">
+          <div class="text-xs text-rl-muted uppercase tracking-wider mb-1 font-semibold">Badge</div>
+          <strong id="match-badge" class="text-rl-neon text-sm font-bold">Waiting</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- Advanced -->
+    <details class="bg-rl-panel border border-rl-border panel-clip p-5">
+      <summary class="select-none">Advanced / Debug</summary>
+      <div class="mt-4 space-y-4">
+        <div>
+          <h3 class="text-rl-dim text-xs uppercase tracking-widest mb-2 font-semibold">Live State JSON</h3>
+          <pre id="live-view"></pre>
+        </div>
+        <div>
+          <h3 class="text-rl-dim text-xs uppercase tracking-widest mb-2 font-semibold">Raw UpdateState</h3>
+          <pre id="raw-update"></pre>
+        </div>
+        <div>
+          <h3 class="text-rl-dim text-xs uppercase tracking-widest mb-2 font-semibold">Stats Status</h3>
+          <pre id="stats-status"></pre>
+        </div>
+        <div>
+          <h3 class="text-rl-dim text-xs uppercase tracking-widest mb-2 font-semibold">Debug Logs</h3>
+          <pre id="debug-logs"></pre>
+        </div>
+      </div>
+    </details>
+
+    <!-- Footer -->
+    <footer class="text-center py-4">
+      <div class="section-line mb-4"></div>
+      <p class="text-rl-muted text-xs tracking-widest font-mono uppercase">Rocket League Rich Presence Controller</p>
+    </footer>
+
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
