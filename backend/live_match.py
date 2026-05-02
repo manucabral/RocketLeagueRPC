@@ -28,7 +28,7 @@ MAP_NAMES = {
     "eurostadium_snownight_p": "Mannfield (Snowy)",
     "eurostadium_dusk_p": "Mannfield (Dusk)",
     "fni_stadiun_p": "Forbidden Temple (Fire & Ice)",
-    "ff_dusk_p": "Estadio Vida (Dusk)",
+    "ff_dusk_p": "Stadium Vida (Dusk)",
     "farm_p": "Farmstead (Dusk)",
     "farm_night_p": "Farmstead (Night)",
     "farm_grs_p": "Farmstead (Pitched)",
