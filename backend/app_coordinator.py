@@ -1,7 +1,6 @@
 """
 Coordinator for managing the application's state and interactions.
 """
-
 from __future__ import annotations
 
 from collections import deque
@@ -11,9 +10,10 @@ from typing import Any, Callable
 
 from .config import config
 from .discord_service import DiscordRPCService
-from .logger import logger
+from .logger import get_log_level, logger, set_log_level
 from .presence_service import PresenceService
 from .presence_settings_service import PresenceSettingsService
+from .stats_api_config import get_stats_api_status, set_stats_api_enabled
 from .tracker import RLStatsTracker
 
 
@@ -25,7 +25,8 @@ class _CoordinatorLogBuffer:
         self._lines: deque[str] = deque(maxlen=maxlen)
 
     def append(self, line: str) -> None:
-        """Prepend a UTC ISO timestamp and append the line to the buffer.
+        """
+        Prepend a UTC ISO timestamp and append the line to the buffer.
 
         Args:
             line: The log message to store.
@@ -54,7 +55,8 @@ class _CoordinatorState:
         }
 
     def update_tracker(self, state: dict[str, Any]) -> None:
-        """Replace the stored tracker state with a shallow copy of *state*.
+        """
+        Replace the stored tracker state with a shallow copy of *state*.
 
         Args:
             state: Latest tracker state dict from ``RLStatsTracker``.
@@ -63,7 +65,8 @@ class _CoordinatorState:
             self._tracker_state = dict(state)
 
     def update_discord(self, state: dict[str, Any]) -> None:
-        """Replace the stored Discord state with a shallow copy of *state*.
+        """
+        Replace the stored Discord state with a shallow copy of *state*.
 
         Args:
             state: Latest Discord state dict from ``DiscordRPCService``.
@@ -84,13 +87,11 @@ class _CoordinatorState:
     def build_live_state(
         self,
         *,
-        presence_config: dict[str, bool],
+        presence_config: dict[str, Any],
         extra_logs: list[str],
     ) -> dict[str, Any]:
-        """Assemble the unified live-state dict sent to the frontend.
-
-        Merges tracker state, Discord state, presence config, and combined
-        debug logs (capped at the last 250 entries).
+        """
+        Assemble the unified live-state dict sent to the frontend.
 
         Args:
             presence_config: Current presence feature-toggle mapping.
@@ -106,6 +107,7 @@ class _CoordinatorState:
         tracker_state["discord"] = discord_state
         tracker_state["presence_config"] = dict(presence_config)
         tracker_state["debug_logs"] = (tracker_logs + extra_logs)[-250:]
+        tracker_state["log_level"] = get_log_level()
         return tracker_state
 
 
@@ -151,7 +153,8 @@ class AppCoordinator:
         max_tries: int = 1,
         retry_delay_seconds: float = 1.0,
     ) -> dict[str, Any]:
-        """Attempt to connect to Discord RPC and return the updated live state.
+        """
+        Attempt to connect to Discord RPC and return the updated live state.
 
         Args:
             max_tries: Maximum number of connection attempts.
@@ -173,12 +176,13 @@ class AppCoordinator:
         self._discord_service.debug_ipc()
         return self.get_live_state()
 
-    def get_presence_config(self) -> dict[str, bool]:
+    def get_presence_config(self) -> dict[str, Any]:
         """Return the active presence feature-toggle configuration."""
         return self._settings_service.get_config()
 
     def set_presence_config(self, cfg: dict[str, Any]) -> dict[str, Any]:
-        """Persist a new presence configuration and push it to Discord.
+        """
+        Persist a new presence configuration and push it to Discord.
 
         Args:
             cfg: Mapping of presence feature keys to boolean toggle values.
@@ -198,7 +202,8 @@ class AppCoordinator:
     def save_presence_preset(
         self, name: str, cfg: dict[str, Any] | None = None, overwrite: bool = False
     ) -> dict[str, Any]:
-        """Save a presence configuration preset.
+        """
+        Save a presence configuration preset.
 
         Args:
             name: Human-readable preset name.
@@ -218,7 +223,8 @@ class AppCoordinator:
         return {"name": name.strip(), "config": saved}
 
     def load_presence_preset(self, name: str) -> dict[str, Any]:
-        """Load a saved preset, make it active, and return the updated live state.
+        """
+        Load a saved preset, make it active, and return the updated live state.
 
         Args:
             name: Name of the preset to load.
@@ -230,7 +236,8 @@ class AppCoordinator:
         return self.set_presence_config(cfg)
 
     def delete_presence_preset(self, name: str) -> dict[str, Any]:
-        """Delete a saved presence preset by name.
+        """
+        Delete a saved presence preset by name.
 
         Args:
             name: Name of the preset to delete.
@@ -249,13 +256,40 @@ class AppCoordinator:
             extra_logs=self._logs.snapshot(),
         )
 
+    def get_stats_api_status(self) -> dict[str, Any]:
+        """Return Rocket League StatsAPI config status."""
+        return get_stats_api_status()
+
+    def set_stats_api_enabled(self, enabled: bool) -> dict[str, Any]:
+        """Enable or disable Rocket League StatsAPI config when available."""
+        status = set_stats_api_enabled(bool(enabled))
+        self._log(
+            "stats api enabled"
+            if status.get("found") and status.get("enabled")
+            else "stats api disabled" if status.get("found") else "stats api config not found"
+        )
+        return status
+
+    def get_log_level(self) -> str:
+        """Return the current logger level name."""
+        return get_log_level()
+
+    def set_log_level(self, level_name: str) -> dict[str, Any]:
+        """Update application log verbosity and return live state."""
+        previous = get_log_level()
+        set_log_level(level_name)
+        current = get_log_level()
+        self._log(f"log level changed: {previous} -> {current}")
+        return self.get_live_state()
+
     def shutdown(self) -> None:
         """Shut down the tracker and disconnect from Discord RPC."""
         self._tracker.shutdown()
         self._discord_service.disconnect()
 
     def _on_tracker_state_change(self, state: dict[str, Any]) -> None:
-        """Handle a tracker state-change notification.
+        """
+        Handle a tracker state-change notification.
 
         Updates the stored tracker state, propagates the last-seen target to the
         presence service, and triggers a presence refresh for relevant events.
@@ -276,7 +310,8 @@ class AppCoordinator:
             self._apply_presence_from_snapshot(state)
 
     def _on_discord_state_change(self, state: dict[str, Any]) -> None:
-        """Handle a Discord state-change notification.
+        """
+        Handle a Discord state-change notification.
 
         Args:
             state: Latest state dict emitted by ``DiscordRPCService``.
@@ -288,7 +323,8 @@ class AppCoordinator:
         self._apply_presence_from_tracker_state(force_discord_connected=True)
 
     def _apply_presence_from_tracker_state(self, *, force_discord_connected: bool = False) -> None:
-        """Read the latest tracker snapshot and push presence to Discord.
+        """
+        Read the latest tracker snapshot and push presence to Discord.
 
         Args:
             force_discord_connected: When ``True``, skip the connected-state
@@ -305,7 +341,8 @@ class AppCoordinator:
         *,
         force_discord_connected: bool = False,
     ) -> None:
-        """Compute and dispatch a Discord presence update from a state snapshot.
+        """
+        Compute and dispatch a Discord presence update from a state snapshot.
 
         Args:
             state: Tracker state dict to derive the presence payload from.
@@ -321,7 +358,8 @@ class AppCoordinator:
         )
 
     def _log(self, line: str) -> None:
-        """Append a line to the coordinator log buffer and emit a debug log.
+        """
+        Append a line to the coordinator log buffer and emit a debug log.
 
         Args:
             line: The message to record.
