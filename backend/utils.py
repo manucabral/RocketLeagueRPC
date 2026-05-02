@@ -32,6 +32,14 @@ def remove_none(d: dict[str, Any]) -> dict[str, Any]:
 
     return clean_dict(d)
 
+def json_safe_presence(args: dict[str, Any]) -> dict[str, Any]:
+    safe: dict[str, Any] = {}
+    for key, value in args.items():
+        if hasattr(value, "value"):
+            safe[key] = value.value
+        else:
+            safe[key] = value
+    return safe
 
 def normalize_preset_name(name: str | None, max_len: int) -> str | None:
     if name is None:
