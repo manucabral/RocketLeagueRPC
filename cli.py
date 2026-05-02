@@ -60,11 +60,7 @@ def _render_status(state: dict) -> str:
     discord_label = (
         _c("Online", GREEN)
         if discord_on
-        else (
-            _c("Reconnecting…", YELLOW)
-            if discord.get("reconnecting")
-            else _c("Offline", RED)
-        )
+        else (_c("Reconnecting…", YELLOW) if discord.get("reconnecting") else _c("Offline", RED))
     )
 
     lines = [
@@ -168,9 +164,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Rocket League Discord Rich Presence — CLI",
     )
     p.add_argument("--no-tracker", action="store_true", help="Skip tracker connection")
-    p.add_argument(
-        "--no-discord", action="store_true", help="Skip Discord RPC connection"
-    )
+    p.add_argument("--no-discord", action="store_true", help="Skip Discord RPC connection")
     p.add_argument("--quiet", action="store_true", help="No live status output")
     p.add_argument(
         "--log-level",
@@ -238,9 +232,7 @@ def main() -> None:
     stop = threading.Event()
 
     if not args.quiet:
-        live_thread = threading.Thread(
-            target=_run_live, args=(coordinator, stop), daemon=True
-        )
+        live_thread = threading.Thread(target=_run_live, args=(coordinator, stop), daemon=True)
         live_thread.start()
 
     try:
