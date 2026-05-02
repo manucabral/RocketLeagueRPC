@@ -10,7 +10,7 @@ from typing import Any
 
 from .constants import MAX_PRESET_NAME_LEN, PRESETS_FILE, PRESETS_VERSION
 from .logger import logger
-from .presence_config import sanitize_presence_config
+from .presence_config import PresenceConfig, load_json_object, sanitize_presence_config
 from .utils import normalize_preset_name
 
 
@@ -30,7 +30,7 @@ class PresencePresetStore:
         """Return a sorted list of all stored preset names."""
         return sorted(self._presets.keys())
 
-    def save(self, name: str, cfg: dict[str, Any], overwrite: bool = False) -> dict[str, bool]:
+    def save(self, name: str, cfg: dict[str, Any], overwrite: bool = False) -> PresenceConfig:
         """Persist a new preset, optionally overwriting an existing one.
 
         Args:
@@ -56,7 +56,7 @@ class PresencePresetStore:
         self._persist()
         return payload
 
-    def load(self, name: str) -> dict[str, bool]:
+    def load(self, name: str) -> PresenceConfig:
         """Return a copy of the stored preset config for *name*.
 
         Args:
@@ -91,25 +91,29 @@ class PresencePresetStore:
     def _path(self) -> Path:
         return self._data_dir / PRESETS_FILE
 
-    def _load(self) -> dict[str, dict[str, bool]]:
+    def _load(self) -> dict[str, PresenceConfig]:
         """Load and return all presets from disk, returning ``{}`` on any error."""
         try:
             path = self._path()
             logger.debug("Loading presets from %s", path)
             if not path.exists():
                 return {}
-            parsed = json.loads(path.read_text(encoding="utf-8"))
+            parsed, recovered = load_json_object(path)
             if not isinstance(parsed, dict):
                 return {}
             presets_obj = parsed.get("presets")
             if not isinstance(presets_obj, dict):
                 return {}
-            output: dict[str, dict[str, bool]] = {}
+            output: dict[str, PresenceConfig] = {}
             for key, value in presets_obj.items():
                 name = _normalize(key)
                 if name is None or not isinstance(value, dict):
                     continue
                 output[name] = sanitize_presence_config(value)
+            if recovered:
+                logger.warning("Recovered presets from trailing JSON data: %s", path)
+                self._presets = output
+                self._persist()
             return output
         except Exception:
             logger.exception("Failed to load presets")
