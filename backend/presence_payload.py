@@ -10,11 +10,20 @@ from typing import Any
 from .rpc import ActivityType
 
 
+def _platform_large_text(platform: str | None) -> str | None:
+    platform_key = str(platform or "").strip().lower()
+    if platform_key == "epic":
+        return "Using Epic"
+    if platform_key == "steam":
+        return "Using Steam"
+    return None
+
+
 def compose_presence_args(
     *,
     view: dict[str, Any] | None,
     in_match: bool,
-    cfg: dict[str, bool],
+    cfg: dict[str, Any],
     current_guid: str | None,
     match_start_epoch_sec: int | None,
     match_start_guid: str | None,
@@ -26,7 +35,9 @@ def compose_presence_args(
 ) -> tuple[dict[str, Any], int | None, str | None, int | None]:
     """Compose presence arguments from view and config."""
 
-    all_disabled = not any(cfg.values())
+    large_image = str(cfg.get("large_image") or "rocket")
+    feature_values = [value for key, value in cfg.items() if key != "large_image"]
+    all_disabled = not any(bool(value) for value in feature_values)
     args: dict[str, Any] = {
         "activity_type": ActivityType.PLAYING,
         "details": None,
@@ -42,13 +53,15 @@ def compose_presence_args(
     if all_disabled:
         args["details"] = "Rocket League"
         args["state"] = "Waiting"
-        args["large_image"] = "rocket"
+        args["large_image"] = large_image
+        args["large_text"] = _platform_large_text(last_target_platform)
         return args, match_start_epoch_sec, match_start_guid, overtime_started_epoch_sec
 
     if not in_match or not view:
         args["details"] = "Rocket League"
         args["state"] = "Waiting"
-        args["large_image"] = "rocket"
+        args["large_image"] = large_image
+        args["large_text"] = _platform_large_text(last_target_platform)
         if cfg["player_name"]:
             args["small_image"] = last_target_platform
             args["small_text"] = last_target_name
@@ -80,7 +93,7 @@ def compose_presence_args(
     elif not has_target:
         if cfg["game_mode"]:
             args["details"] = f"{mode} | Goal Replay" if mode else "Goal Replay"
-            args["large_image"] = "rocket"
+            args["large_image"] = large_image
         else:
             args["details"] = "Rocket League"
     elif (
@@ -104,7 +117,7 @@ def compose_presence_args(
 
     if is_training:
         if cfg["arena_name"] and arena:
-            args["state"] = f"Estadio {arena}"
+            args["state"] = f"Arena {arena}"
         elif cfg["game_mode"]:
             args["state"] = training_label
     elif not has_target:
@@ -137,7 +150,7 @@ def compose_presence_args(
             args["large_text"] = left
         elif right:
             args["large_text"] = right
-        args["large_image"] = "rocket"
+        args["large_image"] = large_image
 
     small_bits: list[str] = []
     if cfg["player_name"] and view.get("player_name"):
@@ -151,6 +164,12 @@ def compose_presence_args(
 
     if cfg["player_name"]:
         args["small_image"] = view.get("player_platform") or last_target_platform
+
+    args["large_image"] = args["large_image"] or large_image
+    if args["large_text"] is None:
+        args["large_text"] = _platform_large_text(
+            view.get("player_platform") or last_target_platform
+        )
 
     now_sec = int(time.time())
     remaining = view.get("remaining_seconds")
