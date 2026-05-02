@@ -14,7 +14,7 @@ class Config:
     """Application configuration."""
 
     app_name: str = os.getenv("APP_NAME", "Rocket League RPC")
-    app_version: str = os.getenv("APP_VERSION", "0.0.1")
+    app_version: str = os.getenv("APP_VERSION", "0.0.2")
     overtime_details_text: str = os.getenv("OVERTIME_DETAILS_TEXT", "Overtime")
     overtime_state_prefix: str = os.getenv("OVERTIME_STATE_PREFIX", "+")
     window_width: int = int(os.getenv("WINDOW_WIDTH", "1000"))
