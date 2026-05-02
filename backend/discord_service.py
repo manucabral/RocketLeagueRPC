@@ -8,9 +8,10 @@ import threading
 import time
 from typing import Any, Callable
 
-from .constants import DEFAULT_DISCORD_CLIENT_ID, MAX_CONNECT_TRIES
+from .constants import DEFAULT_DISCORD_CLIENT_ID, MAX_CONNECT_TRIES, APP_PROMO_BUTTONS
 from .logger import logger
 from .rpc import ClientRPC
+from .utils import json_safe_presence
 
 _UNSET = object()
 
@@ -37,6 +38,7 @@ class DiscordRPCService:
         self._rpc: ClientRPC | None = None
         self._client_id: str | None = None
         self._last_error: str | None = None
+        self._last_presence: dict[str, Any] | None = None
 
     def connect(
         self,
@@ -167,21 +169,28 @@ class DiscordRPCService:
             rpc = self._rpc
         if rpc is None:
             return
+        presence_args = dict(args)
+        presence_args["buttons"] = APP_PROMO_BUTTONS
+        safe_presence = json_safe_presence(presence_args)
+        with self._lock:
+            if self._last_presence == safe_presence:
+                return
         try:
             rpc.update(
-                state=args.get("state"),
-                details=args.get("details"),
-                activity_type=args.get("activity_type"),
-                start_time=args.get("start_time"),
-                end_time=args.get("end_time"),
-                large_image=args.get("large_image"),
-                large_text=args.get("large_text"),
-                small_image=args.get("small_image"),
-                small_text=args.get("small_text"),
-                buttons=None,
+                state=presence_args.get("state"),
+                details=presence_args.get("details"),
+                activity_type=presence_args.get("activity_type"),
+                start_time=presence_args.get("start_time"),
+                end_time=presence_args.get("end_time"),
+                large_image=presence_args.get("large_image"),
+                large_text=presence_args.get("large_text"),
+                small_image=presence_args.get("small_image"),
+                small_text=presence_args.get("small_text"),
+                buttons=presence_args.get("buttons"),
             )
             with self._lock:
                 self._last_error = None
+                self._last_presence = safe_presence
             self._publish_state(
                 connected=True, reconnecting=self._reconnect_inflight, last_error=None
             )
@@ -244,6 +253,9 @@ class DiscordRPCService:
                 "client_id": self._client_id,
                 "last_error": self._last_error,
                 "reconnecting": self._reconnect_inflight,
+                "last_presence": (
+                    dict(self._last_presence) if self._last_presence is not None else None
+                ),
             }
 
     def _publish_state(
