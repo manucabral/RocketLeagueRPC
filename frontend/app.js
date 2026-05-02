@@ -3,6 +3,15 @@
   const DEBOUNCE_MS = 220
   const MAX_DEBUG_LOGS = 250
   const DEFAULT_WAIT_MS = 120
+  const STATS_API_WARNING = `Before launching Rocket League, edit:
+
+<Install Dir>\\TAGame\\Config\\DefaultStatsAPI.ini
+
+Use at least:
+
+PacketSendRate=30 (any value > 0 enables the exporter)
+Port=49123
+Restart the game after changing the file.`
 
   const FEATURE_GROUPS = {
     match: ['arena_name', 'current_score', 'timer', 'game_mode', 'match_status'],
@@ -22,6 +31,17 @@
     shots: 'Shots',
   }
 
+  const LOGO_OPTIONS = [
+    { value: 'rocket', label: 'Rocket', src: './assets/default-logo.webp' },
+    { value: 'rocket2', label: 'Rocket 2', src: './assets/rpc-logo.webp' },
+  ]
+
+  const LOGO_SRC_BY_VALUE = Object.fromEntries(LOGO_OPTIONS.map((option) => [option.value, option.src]))
+  const PLATFORM_IMAGE_SRC = {
+    epic: './assets/epic.png',
+    steam: './assets/steam.png',
+  }
+
   const DEFAULT_CONFIG = {
     arena_name: true,
     current_score: true,
@@ -33,6 +53,7 @@
     goals: true,
     assists: true,
     shots: true,
+    large_image: 'rocket',
   }
 
   const mockState = {
@@ -57,19 +78,30 @@
     },
     presence_config: { ...DEFAULT_CONFIG },
     discord: { connected: false, client_id: null, last_error: null, reconnecting: false },
+    log_level: 'INFO',
     debug_logs: ['[mock] window.pywebview not detected; using mock API'],
     last_update_state: null,
   }
 
   const mockPresets = new Map()
+  const mockStatsApi = {
+    found: false,
+    enabled: false,
+    path: null,
+    packet_send_rate: null,
+    port: null,
+    warning: STATS_API_WARNING,
+  }
 
   let state = {}
   let config = { ...DEFAULT_CONFIG }
   let presets = []
+  let statsApi = null
   let activePreset = ''
   let syncStatus = 'synced'
   let busyTracker = false
   let busyDiscord = false
+  let busyStatsApi = false
   let runningDebug = false
   let debounceTimer = null
   let pollTimer = null
@@ -79,19 +111,28 @@
     appVersion: document.getElementById('app-version'),
     trackerStatus: document.getElementById('tracker-status'),
     trackerToggle: document.getElementById('tracker-toggle'),
+    statsApiDot: document.getElementById('_stats-api-dot'),
+    statsApiStatus: document.getElementById('stats-api-status'),
+    statsApiToggle: document.getElementById('stats-api-toggle'),
+    statsApiWarning: document.getElementById('stats-api-warning'),
     discordStatus: document.getElementById('discord-status'),
     discordToggle: document.getElementById('discord-toggle'),
     discordDebug: document.getElementById('discord-debug'),
     rpcTitle: document.getElementById('rpc-title'),
+    rpcLargeImage: document.getElementById('rpc-large-image'),
+    rpcSmallImage: document.getElementById('rpc-small-image'),
     rpcState: document.getElementById('rpc-state'),
     rpcDetails: document.getElementById('rpc-details'),
     rpcTime: document.getElementById('rpc-time'),
     matchArena: document.getElementById('match-arena'),
+    previewArena: document.getElementById('preview-arena'),
     matchMode: document.getElementById('match-mode'),
+    previewMode: document.getElementById('preview-mode'),
     scoreOrange: document.getElementById('score-orange'),
     scoreBlue: document.getElementById('score-blue'),
     matchTimer: document.getElementById('match-timer'),
     matchBadge: document.getElementById('match-badge'),
+    previewBadge: document.getElementById('preview-badge'),
     features: document.getElementById('features'),
     syncStatus: document.getElementById('sync-status'),
     presetName: document.getElementById('preset-name'),
@@ -105,6 +146,8 @@
     rawUpdate: document.getElementById('raw-update'),
     statsStatus: document.getElementById('stats-status'),
     debugLogs: document.getElementById('debug-logs'),
+    logLevelSelect: document.getElementById('log-level-select'),
+    logLevelStatus: document.getElementById('log-level-status'),
   }
 
   function hasBridge() {
@@ -122,7 +165,7 @@
 
     switch (method) {
       case 'get_app_info':
-        return { name: 'Rocket League RPC', version: '0.0.0', dev_mode: true }
+        return { name: 'Rocket League RPC', version: '0.0.2', dev_mode: true }
       case 'get_live_state':
         return JSON.parse(JSON.stringify(mockState))
       case 'connect_tracker':
@@ -152,6 +195,25 @@
         mockState.discord.connected = true
         mockState.discord.last_error = null
         mockState.debug_logs = [...(mockState.debug_logs || []), '[mock] IPC debug completed'].slice(-MAX_DEBUG_LOGS)
+        return JSON.parse(JSON.stringify(mockState))
+      case 'get_stats_api_status':
+        return JSON.parse(JSON.stringify(mockStatsApi))
+      case 'set_stats_api_enabled':
+        await wait()
+        if (!mockStatsApi.found) return JSON.parse(JSON.stringify(mockStatsApi))
+        mockStatsApi.enabled = !!args[0]
+        mockStatsApi.packet_send_rate = mockStatsApi.enabled ? 1 : 0
+        mockStatsApi.port = 49123
+        return JSON.parse(JSON.stringify(mockStatsApi))
+      case 'get_log_level':
+        return mockState.log_level || 'INFO'
+      case 'set_log_level':
+        await wait()
+        mockState.log_level = String(args[0] || 'INFO').toUpperCase()
+        mockState.debug_logs = [
+          ...(mockState.debug_logs || []),
+          `[mock] log level changed to ${mockState.log_level}`,
+        ].slice(-MAX_DEBUG_LOGS)
         return JSON.parse(JSON.stringify(mockState))
       case 'get_presence_config':
         return { ...(mockState.presence_config || DEFAULT_CONFIG) }
@@ -201,6 +263,34 @@
     return 'Discord Offline'
   }
 
+  function statsApiText(currentStatsApi) {
+    if (!currentStatsApi) return 'Unknown'
+    if (!currentStatsApi.found) return 'Config not found'
+    return currentStatsApi.enabled ? 'Enabled' : 'Disabled'
+  }
+
+  function fallbackPresence(currentState) {
+    const live = currentState.live_match_view || {}
+    return {
+      details: 'Rocket League',
+      state: currentState.in_match ? (live.arena || 'In Match') : 'Waiting',
+      large_image: config.large_image || 'rocket',
+      small_image: live.player_platform || null,
+      small_text: null,
+      start_time: null,
+      end_time: null,
+    }
+  }
+
+  function assetSrcForLargeImage(value) {
+    return LOGO_SRC_BY_VALUE[value || 'rocket'] || LOGO_SRC_BY_VALUE.rocket
+  }
+
+  function assetSrcForSmallImage(value) {
+    const key = String(value || '').toLowerCase()
+    return PLATFORM_IMAGE_SRC[key] || PLATFORM_IMAGE_SRC.steam
+  }
+
   function previewDetails(currentState) {
     const inMatch = !!currentState.in_match
     const live = currentState.live_match_view || {}
@@ -219,29 +309,26 @@
 
     const buildGroup = (title, keys, accentColor) => {
       const wrapper = document.createElement('div')
-      wrapper.style.cssText = `background:#0d0d1a; border:1px solid #1a1a2e; border-top:2px solid ${accentColor}; padding:12px;`
+      wrapper.className = 'feature-group'
+      wrapper.style.borderTop = `2px solid ${accentColor}`
 
       const legend = document.createElement('div')
       legend.textContent = title
-      legend.style.cssText = `font-family:'Orbitron',sans-serif; font-size:0.65rem; font-weight:700; letter-spacing:0.25em; text-transform:uppercase; color:${accentColor}; margin-bottom:10px;`
+      legend.className = 'feature-group-title'
+      legend.style.color = accentColor
       wrapper.appendChild(legend)
 
       const list = document.createElement('div')
-      list.style.cssText = 'display:flex; flex-direction:column; gap:8px;'
+      list.className = 'feature-list'
 
       keys.forEach((key) => {
         const label = document.createElement('label')
-        label.style.cssText = 'display:flex; align-items:center; gap:8px; cursor:pointer; color:#94a3b8; font-size:0.85rem; font-weight:600; letter-spacing:0.04em; transition:color 0.15s;'
-        label.onmouseenter = () => { label.style.color = '#e2e8f0' }
-        label.onmouseleave = () => { label.style.color = config[key] ? '#e2e8f0' : '#94a3b8' }
+        label.className = config[key] ? 'feature-option is-active' : 'feature-option'
 
         const checkbox = document.createElement('input')
         checkbox.type = 'checkbox'
         checkbox.checked = !!config[key]
-        checkbox.style.cssText = `accent-color:${accentColor}; width:14px; height:14px; cursor:pointer; flex-shrink:0;`
         checkbox.addEventListener('change', () => onToggleFeature(key))
-
-        if (config[key]) label.style.color = '#e2e8f0'
 
         label.appendChild(checkbox)
         label.append(FEATURE_LABELS[key])
@@ -252,8 +339,52 @@
       return wrapper
     }
 
+    const buildLogoGroup = () => {
+      const wrapper = document.createElement('div')
+      wrapper.className = 'logo-group'
+      wrapper.style.borderTop = '2px solid #00E5FF'
+
+      const legend = document.createElement('div')
+      legend.textContent = 'RPC Logo'
+      legend.className = 'feature-group-title'
+      legend.style.color = '#00E5FF'
+      wrapper.appendChild(legend)
+
+      const list = document.createElement('div')
+      list.className = 'logo-options'
+
+      LOGO_OPTIONS.forEach((option) => {
+        const selected = (config.large_image || 'rocket') === option.value
+        const label = document.createElement('label')
+        label.className = selected ? 'logo-option is-active' : 'logo-option'
+
+        const radio = document.createElement('input')
+        radio.type = 'radio'
+        radio.name = 'large-image'
+        radio.value = option.value
+        radio.checked = selected
+        radio.addEventListener('change', () => onSelectLargeImage(option.value))
+
+        const img = document.createElement('img')
+        img.src = option.src
+        img.alt = `${option.label} RPC logo`
+
+        const text = document.createElement('span')
+        text.textContent = option.label
+
+        label.appendChild(radio)
+        label.appendChild(img)
+        label.appendChild(text)
+        list.appendChild(label)
+      })
+
+      wrapper.appendChild(list)
+      return wrapper
+    }
+
     el.features.appendChild(buildGroup('Match Info', FEATURE_GROUPS.match, '#1B8FFF'))
     el.features.appendChild(buildGroup('Player Stats', FEATURE_GROUPS.player, '#FF6B00'))
+    el.features.appendChild(buildLogoGroup())
   }
 
   function renderPresets() {
@@ -280,26 +411,51 @@
 
     const trackerStatusText = trackerText(currentState)
     const discordStatusText = discordText(currentState)
+    const statsApiStatusText = statsApiText(statsApi)
 
     el.trackerStatus.textContent = trackerStatusText
     el.discordStatus.textContent = discordStatusText
+    el.statsApiStatus.textContent = statsApiStatusText
 
     const connectedTracker = !!(currentState.connected && currentState.listening)
     const requestedTracker = !!currentState.requested
     el.trackerToggle.textContent = connectedTracker ? 'Disconnect Tracker' : requestedTracker ? 'Connecting...' : 'Connect Tracker'
     el.trackerToggle.disabled = busyTracker || (requestedTracker && !connectedTracker)
-    el.trackerToggle.className = (connectedTracker ? 'btn-orange' : 'btn-blue') + ' px-4 py-2 text-sm cursor-pointer'
+    el.trackerToggle.className = connectedTracker ? 'button button-orange' : 'button button-primary'
+
+    el.statsApiToggle.textContent = busyStatsApi
+      ? 'Applying...'
+      : statsApi && statsApi.found
+        ? statsApi.enabled ? 'Disable StatsAPI' : 'Enable StatsAPI'
+        : 'StatsAPI Help'
+    el.statsApiToggle.disabled = busyStatsApi || !statsApi || !statsApi.found
+    el.statsApiToggle.className = statsApi && statsApi.found && statsApi.enabled ? 'button button-orange' : 'button button-primary'
+    el.statsApiDot.className = (
+      !statsApi ? 'dot-wait' :
+      !statsApi.found ? 'dot-wait' :
+      statsApi.enabled ? 'dot-on' : 'dot-off'
+    )
+    if (statsApi && !statsApi.found && statsApi.warning) {
+      el.statsApiWarning.textContent = statsApi.warning
+      el.statsApiWarning.classList.remove('hidden')
+    } else {
+      el.statsApiWarning.textContent = ''
+      el.statsApiWarning.classList.add('hidden')
+    }
 
     el.discordToggle.textContent = discord.connected ? 'Disconnect RPC' : 'Connect Discord RPC'
     el.discordToggle.disabled = busyDiscord || runningDebug
-    el.discordToggle.className = (discord.connected ? 'btn-orange' : 'btn-blue') + ' px-4 py-2 text-sm cursor-pointer'
+    el.discordToggle.className = discord.connected ? 'button button-orange' : 'button button-primary'
     el.discordDebug.textContent = runningDebug ? 'Debugging...' : 'Debug IPC'
     el.discordDebug.disabled = runningDebug
 
+    const presence = discord.last_presence || fallbackPresence(currentState)
     el.rpcTitle.textContent = 'Rocket League'
-    el.rpcState.textContent = currentState.in_match ? (live.arena || 'In Match') : 'Waiting'
-    el.rpcDetails.textContent = previewDetails(currentState)
-    el.rpcTime.textContent = currentState.in_match ? `${live.elapsed_seconds || 0}s elapsed` : '00:00 elapsed'
+    el.rpcState.textContent = presence.details || 'Rocket League'
+    el.rpcDetails.textContent = presence.state || 'Waiting'
+    el.rpcTime.textContent = presence.start_time || presence.end_time ? 'Timer active' : 'No timer'
+    el.rpcLargeImage.src = assetSrcForLargeImage(presence.large_image)
+    el.rpcSmallImage.src = assetSrcForSmallImage(presence.small_image)
 
     el.matchArena.textContent = live.arena || 'Rocket League'
     el.matchMode.textContent = live.mode || 'Awaiting live match data'
@@ -307,11 +463,18 @@
     el.scoreBlue.textContent = String(live.opponent_score || 0)
     el.matchTimer.textContent = live.time || '0:00'
     el.matchBadge.textContent = live.status || 'Waiting'
+    el.previewArena.textContent = presence.details || 'Rocket League'
+    el.previewMode.textContent = presence.state || 'Waiting'
+    el.previewBadge.textContent = presence.small_text || presence.small_image || 'No small asset'
 
     el.syncStatus.textContent =
       syncStatus === 'pending' ? 'Pending...' :
       syncStatus === 'applying' ? 'Applying...' :
       syncStatus === 'error' ? 'Error syncing features' : 'Synced'
+
+    const logLevel = currentState.log_level || 'INFO'
+    el.logLevelSelect.value = logLevel
+    el.logLevelStatus.textContent = `Current level: ${logLevel}`
 
     el.liveView.textContent = JSON.stringify(currentState, null, 2)
     el.rawUpdate.textContent = JSON.stringify(currentState.last_update_state || {}, null, 2)
@@ -329,15 +492,17 @@
   }
 
   async function refreshAll() {
-    const [nextState, nextConfig, nextPresets] = await Promise.all([
+    const [nextState, nextConfig, nextPresets, nextStatsApi] = await Promise.all([
       apiCall('get_live_state'),
       apiCall('get_presence_config'),
       apiCall('list_presence_presets'),
+      apiCall('get_stats_api_status'),
     ])
 
     state = nextState || {}
     config = nextConfig || { ...DEFAULT_CONFIG }
     presets = nextPresets || []
+    statsApi = nextStatsApi || null
     el.presetStatus.textContent = presets.length ? `${presets.length} preset(s) available` : 'No presets saved'
     render()
   }
@@ -370,6 +535,10 @@
     scheduleConfigApply({ ...config, [key]: !config[key] })
   }
 
+  function onSelectLargeImage(value) {
+    scheduleConfigApply({ ...config, large_image: value })
+  }
+
   async function toggleTracker() {
     const prevState = state
     try {
@@ -385,6 +554,22 @@
       state = prevState
     } finally {
       busyTracker = false
+      render()
+    }
+  }
+
+  async function toggleStatsApi() {
+    if (!statsApi || !statsApi.found) return
+    const previous = statsApi
+    try {
+      busyStatsApi = true
+      render()
+      statsApi = await apiCall('set_stats_api_enabled', !statsApi.enabled)
+    } catch (err) {
+      console.warn('toggleStatsApi failed:', err)
+      statsApi = previous
+    } finally {
+      busyStatsApi = false
       render()
     }
   }
@@ -476,6 +661,21 @@
     render()
   }
 
+  async function setLogLevel() {
+    const nextLevel = el.logLevelSelect.value
+    el.logLevelSelect.disabled = true
+    el.logLevelStatus.textContent = `Applying ${nextLevel}...`
+    try {
+      state = await apiCall('set_log_level', nextLevel)
+    } catch (err) {
+      console.warn('setLogLevel failed:', err)
+      el.logLevelStatus.textContent = 'Could not update log level'
+    } finally {
+      el.logLevelSelect.disabled = false
+    }
+    render()
+  }
+
   async function bootstrap() {
     const info = await apiCall('get_app_info')
     el.appName.textContent = info.name
@@ -486,6 +686,7 @@
 
   function wireEvents() {
     el.trackerToggle.addEventListener('click', () => { void toggleTracker() })
+    el.statsApiToggle.addEventListener('click', () => { void toggleStatsApi() })
     el.discordToggle.addEventListener('click', () => { void toggleDiscord() })
     el.discordDebug.addEventListener('click', () => { void debugDiscord() })
 
@@ -494,6 +695,7 @@
     el.presetOverwrite.addEventListener('click', () => { void savePreset(true) })
     el.presetLoad.addEventListener('click', () => { void loadPreset() })
     el.presetDelete.addEventListener('click', () => { void deletePreset() })
+    el.logLevelSelect.addEventListener('change', () => { void setLogLevel() })
   }
 
   async function start() {
