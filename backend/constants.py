@@ -16,3 +16,11 @@ PRESENCE_CONFIG_FILE = "presence-config.json"
 PRESETS_FILE = "presence-presets.json"
 PRESETS_VERSION = 1
 MAX_PRESET_NAME_LEN = 64
+
+# Promo
+APP_PROMO_BUTTONS = [
+    {
+        "label": "Get RocketLeagueRPC",
+        "url": "https://manucabral.github.io/RocketLeagueRPC/",
+    }
+]
