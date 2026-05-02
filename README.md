@@ -76,8 +76,13 @@ python main.py
 ```
 
 
-## Contributing
-Contributions are welcome. Please fork the repository and submit a pull request.
+## Contributors
+People who contribute to the development, maintenance, and improvement of the application.
+
+<a href="https://github.com/manucabral/rocketleaguerpc/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=manucabral/rocketleaguerpc" />
+</a>
+
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
