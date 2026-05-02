@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .presence_config import (
+    PresenceConfig,
     load_presence_config,
     sanitize_presence_config,
     save_presence_config,
@@ -23,11 +24,11 @@ class PresenceSettingsService:
         self._config = load_presence_config(data_dir)
         self._preset_store = PresencePresetStore(data_dir)
 
-    def get_config(self) -> dict[str, bool]:
+    def get_config(self) -> PresenceConfig:
         """Return a copy of the currently active presence configuration."""
         return dict(self._config)
 
-    def set_config(self, new_config: dict[str, Any]) -> dict[str, bool]:
+    def set_config(self, new_config: dict[str, Any]) -> PresenceConfig:
         """Validate, persist, and activate a new presence configuration.
 
         Args:
@@ -47,7 +48,7 @@ class PresenceSettingsService:
 
     def save_preset(
         self, name: str, cfg: dict[str, Any], overwrite: bool = False
-    ) -> dict[str, bool]:
+    ) -> PresenceConfig:
         """Save a presence configuration preset.
 
         Args:
@@ -60,7 +61,7 @@ class PresenceSettingsService:
         """
         return self._preset_store.save(name=name, cfg=cfg, overwrite=overwrite)
 
-    def load_preset(self, name: str) -> dict[str, bool]:
+    def load_preset(self, name: str) -> PresenceConfig:
         """Load and return the config dict for the named preset.
 
         Args:
