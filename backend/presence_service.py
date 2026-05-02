@@ -55,7 +55,7 @@ class PresenceService:
         discord_connected: bool,
         view: dict[str, Any] | None,
         in_match: bool,
-        cfg: dict[str, bool],
+        cfg: dict[str, Any],
         match_guid: str | None,
     ) -> None:
         """Compose a presence payload and send it to Discord if connected.
@@ -85,7 +85,7 @@ class PresenceService:
         view: dict[str, Any] | None,
         *,
         in_match: bool,
-        cfg: dict[str, bool],
+        cfg: dict[str, Any],
         match_guid: str | None,
     ) -> dict[str, Any]:
         """Build the presence payload dict from current match state.
