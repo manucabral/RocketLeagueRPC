@@ -1,0 +1,1469 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rocket League RPC</title>
+  <meta
+    name="description"
+    content="Rocket League RPC is an open source Windows app that sends live Rocket League match data to Discord Rich Presence."
+  >
+  <link rel="icon" type="image/svg+xml" href="../frontend/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  >
+  <style>
+    :root {
+      --bg: #06101d;
+      --bg-deep: #040913;
+      --panel: rgba(10, 19, 32, 0.82);
+      --panel-strong: rgba(9, 17, 28, 0.95);
+      --line: rgba(141, 169, 201, 0.16);
+      --line-strong: rgba(141, 169, 201, 0.24);
+      --text: #edf6ff;
+      --muted: #b3c6dc;
+      --blue: #2191ff;
+      --blue-soft: #89ceff;
+      --orange: #ff6b00;
+      --orange-soft: #ffb173;
+      --green: #42dd95;
+      --shadow-blue: 0 24px 80px rgba(33, 145, 255, 0.18);
+      --shadow-orange: 0 24px 80px rgba(255, 107, 0, 0.12);
+      --max: 1180px;
+      --radius: 26px;
+      --radius-sm: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "Manrope", sans-serif;
+      background:
+        radial-gradient(circle at 15% 18%, rgba(33, 145, 255, 0.16), transparent 26%),
+        radial-gradient(circle at 84% 22%, rgba(255, 107, 0, 0.12), transparent 22%),
+        linear-gradient(180deg, #07111f 0%, #050b15 45%, #03060d 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+      background-size: 32px 32px;
+      mask-image: linear-gradient(180deg, rgba(255, 255, 255, 0.9), transparent 88%);
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(116deg, transparent 0 43%, rgba(33, 145, 255, 0.05) 43% 43.18%, transparent 43.18% 100%),
+        linear-gradient(116deg, transparent 0 59%, rgba(255, 107, 0, 0.045) 59% 59.18%, transparent 59.18% 100%);
+      opacity: 0.85;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    a:focus-visible,
+    button:focus-visible {
+      outline: 3px solid rgba(137, 206, 255, 0.95);
+      outline-offset: 3px;
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+    }
+
+    .container {
+      width: min(calc(100% - 2rem), var(--max));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(5, 10, 18, 0.82);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.9rem 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 2.75rem;
+      height: 2.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 1px solid rgba(137, 206, 255, 0.24);
+      background:
+        linear-gradient(135deg, rgba(33, 145, 255, 0.24), rgba(255, 107, 0, 0.12)),
+        rgba(8, 16, 28, 0.92);
+      box-shadow: var(--shadow-blue);
+      clip-path: polygon(12% 0, 100% 0, 100% 84%, 88% 100%, 0 100%, 0 16%);
+    }
+
+    .brand-mark img {
+      width: 1.5rem;
+      height: 1.5rem;
+      display: block;
+    }
+
+    .brand-copy strong,
+    .hero h1,
+    .section-kicker,
+    .section h2,
+    .preview-head,
+    .footer {
+      font-family: "Orbitron", sans-serif;
+    }
+
+    .brand-copy strong {
+      display: block;
+      font-size: 0.9rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .brand-copy span {
+      display: block;
+      margin-top: 0.15rem;
+      font-size: 0.76rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .nav a {
+      font-size: 0.82rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      transition: color 0.2s ease, text-shadow 0.2s ease;
+    }
+
+    .nav a:hover {
+      color: var(--text);
+      text-shadow: 0 0 18px rgba(137, 206, 255, 0.28);
+    }
+
+    .topbar-download {
+      min-width: auto;
+      padding: 0.62rem 1rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+    }
+
+    .hero {
+      position: relative;
+      padding: 5.4rem 0 3.2rem;
+      isolation: isolate;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0.8rem;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(33, 145, 255, 0.45), rgba(255, 107, 0, 0.36), transparent);
+      z-index: -1;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(340px, 0.92fr);
+      gap: clamp(1.6rem, 4vw, 3rem);
+      align-items: center;
+    }
+
+    .hero-copy {
+      max-width: 44rem;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      margin-bottom: 0.95rem;
+      color: var(--blue-soft);
+      font-family: "Orbitron", sans-serif;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .hero-eyebrow::before {
+      content: "";
+      width: 1.9rem;
+      height: 2px;
+      background: linear-gradient(90deg, var(--orange), var(--blue-soft));
+    }
+
+    .hero h1 {
+      margin: 0;
+      max-width: 14ch;
+      font-size: clamp(2.45rem, 4.7vw, 4.55rem);
+      line-height: 1.02;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      text-wrap: balance;
+    }
+
+    .hero h1 span {
+      color: var(--orange-soft);
+      text-shadow: 0 0 28px rgba(255, 107, 0, 0.22);
+    }
+
+    .hero p {
+      max-width: 40rem;
+      margin: 1.15rem 0 0;
+      color: #c4d4e8;
+      font-size: 1.04rem;
+      line-height: 1.72;
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.9rem;
+      margin-top: 1.7rem;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 11rem;
+      padding: 0.98rem 1.3rem;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: 0;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+    }
+
+    .button-primary {
+      background: linear-gradient(135deg, var(--blue), #5fc8ff);
+      color: #04101b;
+      box-shadow: 0 16px 34px rgba(33, 145, 255, 0.27);
+    }
+
+    .button-secondary {
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .button-tertiary {
+      color: var(--blue-soft);
+      border: 1px solid rgba(137, 206, 255, 0.18);
+      background: rgba(33, 145, 255, 0.08);
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      margin-top: 1.2rem;
+    }
+
+    .meta-pill {
+      padding: 0.62rem 0.85rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.028);
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    .meta-pill strong {
+      color: var(--text);
+    }
+
+    .trust-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin-top: 1.05rem;
+    }
+
+    .trust-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.38rem 0.68rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(137, 206, 255, 0.15);
+      color: #d7e4f5;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hero-note {
+      margin-top: 1.1rem;
+      color: var(--muted);
+      font-size: 0.94rem;
+      line-height: 1.65;
+      max-width: 38rem;
+    }
+
+    .preview {
+      position: relative;
+      padding: 1.35rem;
+      border-radius: var(--radius);
+      background:
+        linear-gradient(160deg, rgba(12, 22, 37, 0.98), rgba(7, 13, 23, 0.94)),
+        rgba(7, 12, 20, 0.96);
+      border: 1px solid rgba(137, 206, 255, 0.2);
+      box-shadow: var(--shadow-blue), var(--shadow-orange), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .preview::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      background: linear-gradient(135deg, rgba(33, 145, 255, 0.12), transparent 36%, rgba(255, 107, 0, 0.1));
+    }
+
+    .preview-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .preview-head {
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--blue-soft);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .status-badge::before {
+      content: "";
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 12px rgba(66, 221, 149, 0.65);
+    }
+
+    .discord-card {
+      padding: 1rem;
+      border-radius: 18px;
+      background: rgba(24, 27, 32, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      position: relative;
+      z-index: 1;
+    }
+
+    .discord-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.95rem;
+    }
+
+    .discord-icon {
+      position: relative;
+      width: 5.75rem;
+      height: 5.75rem;
+      flex-shrink: 0;
+      border-radius: 1.35rem;
+      overflow: visible;
+      background: linear-gradient(135deg, rgba(33, 145, 255, 0.24), rgba(255, 107, 0, 0.18));
+      border: 1px solid rgba(137, 206, 255, 0.2);
+      box-shadow: 0 0 20px rgba(33, 145, 255, 0.16);
+    }
+
+    .discord-icon::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 1.35rem;
+      overflow: hidden;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    .discord-icon img {
+      display: block;
+      transition: opacity 0.25s ease;
+    }
+
+    .large-image {
+      border-radius: 1.35rem;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .small-image {
+      position: absolute;
+      right: -0.12rem;
+      bottom: -0.12rem;
+      width: 1.9rem;
+      height: 1.9rem;
+      padding: 0.14rem;
+      border-radius: 999px;
+      object-fit: cover;
+      background: #1f2329;
+      border: 3px solid #1f2329;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.28);
+      cursor: default;
+      z-index: 4;
+    }
+
+    .small-tooltip {
+      position: absolute;
+      left: calc(100% + 0.55rem);
+      bottom: -0.1rem;
+      min-width: 9rem;
+      padding: 0.7rem 0.78rem;
+      border-radius: 16px;
+      background: rgba(17, 19, 24, 0.98);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.34);
+      opacity: 0;
+      transform: translateX(-4px) scale(0.98);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .small-tooltip::after {
+      content: "";
+      position: absolute;
+      left: -0.32rem;
+      bottom: 0.72rem;
+      width: 0.7rem;
+      height: 0.7rem;
+      background: rgba(17, 19, 24, 0.98);
+      border-left: 1px solid rgba(255, 255, 255, 0.06);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      transform: rotate(45deg);
+    }
+
+    .small-tooltip strong {
+      display: block;
+      font-size: 0.76rem;
+      line-height: 1.2;
+      margin: 0;
+      color: #ffffff;
+      font-weight: 800;
+    }
+
+    .small-tooltip span {
+      display: block;
+      margin-top: 0.18rem;
+      font-size: 0.62rem;
+      line-height: 1.25;
+      color: rgba(237, 246, 255, 0.72);
+    }
+
+    .small-tooltip .tooltip-platform {
+      margin-top: 0.08rem;
+      color: #8b9bb4;
+    }
+
+    .small-tooltip .tooltip-line {
+      width: 100%;
+      height: 1px;
+      margin: 0.48rem 0 0.44rem;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .small-image:hover + .small-tooltip {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+
+    @media (max-width: 720px) {
+      .small-tooltip {
+        left: auto;
+        right: -0.2rem;
+        bottom: 2.2rem;
+      }
+
+      .small-tooltip::after {
+        left: auto;
+        right: 0.72rem;
+        bottom: -0.34rem;
+        border-left: none;
+        border-bottom: none;
+        border-right: 1px solid rgba(255, 255, 255, 0.06);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+    }
+
+    .discord-copy strong {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 1rem;
+    }
+
+    .discord-copy p {
+      margin: 0.15rem 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.45;
+    }
+
+    .discord-copy .accent {
+      color: var(--text);
+    }
+
+    .preview-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.95rem;
+    }
+
+    .preview-item {
+      padding: 0.85rem 0.9rem;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .preview-item small {
+      display: block;
+      margin-bottom: 0.28rem;
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .preview-item strong {
+      font-size: 0.98rem;
+    }
+
+    .section {
+      padding: 3.2rem 0;
+    }
+
+    .section-alt {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.012));
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 0.8fr) minmax(280px, 0.55fr);
+      gap: 1.4rem;
+      align-items: end;
+    }
+
+    .section .section-head p.lead {
+      margin: 0;
+    }
+
+    .section-kicker {
+      margin: 0 0 0.7rem;
+      color: var(--blue-soft);
+      font-size: 0.72rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    .section h2 {
+      margin: 0;
+      font-size: clamp(1.55rem, 3vw, 2.5rem);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .section p.lead {
+      max-width: 42rem;
+      margin: 0.95rem 0 0;
+      color: #c0cfe3;
+      font-size: 1rem;
+      line-height: 1.68;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+      margin-top: 1.65rem;
+    }
+
+    .card {
+      padding: 1.25rem;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(180deg, rgba(13, 24, 40, 0.78), rgba(7, 14, 24, 0.78));
+      border: 1px solid rgba(141, 169, 201, 0.15);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.13);
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(137, 206, 255, 0.24);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+    }
+
+    .card h3 {
+      margin: 0 0 0.55rem;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .feature-card {
+      min-height: 11.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .feature-index {
+      margin-bottom: 1.6rem;
+      color: rgba(137, 206, 255, 0.9);
+      font-family: "Orbitron", sans-serif;
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .screenshots-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
+      gap: 1rem;
+      margin-top: 1.65rem;
+      align-items: stretch;
+    }
+
+    .screenshot-card {
+      padding: 1rem;
+      border-radius: 22px;
+      background:
+        linear-gradient(160deg, rgba(13, 23, 37, 0.92), rgba(8, 14, 24, 0.9)),
+        var(--panel);
+      border: 1px solid rgba(137, 206, 255, 0.14);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .screenshot-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(137, 206, 255, 0.34);
+      box-shadow: 0 20px 44px rgba(7, 12, 21, 0.36);
+    }
+
+    .screenshot-card.featured {
+      grid-row: span 2;
+    }
+
+    .screenshot-frame {
+      margin: 0 0 0.9rem;
+      border-radius: 14px;
+      border: 1px solid rgba(137, 206, 255, 0.22);
+      background:
+        radial-gradient(circle at 16% 18%, rgba(33, 145, 255, 0.18), transparent 44%),
+        linear-gradient(180deg, rgba(11, 20, 33, 0.96), rgba(7, 12, 20, 0.96));
+      overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 26px rgba(0, 0, 0, 0.24);
+    }
+
+    .screenshot-chrome {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.56rem 0.7rem;
+      border-bottom: 1px solid rgba(137, 206, 255, 0.18);
+      background: rgba(8, 13, 21, 0.94);
+    }
+
+    .screenshot-dot {
+      width: 0.52rem;
+      height: 0.52rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.26);
+    }
+
+    .screenshot-dot.is-blue {
+      background: rgba(96, 200, 255, 0.84);
+    }
+
+    .screenshot-dot.is-orange {
+      background: rgba(255, 151, 87, 0.84);
+    }
+
+    .screenshot-media {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem;
+      aspect-ratio: 725 / 320;
+    }
+
+    .screenshot-card.featured .screenshot-media {
+      aspect-ratio: 959 / 999;
+      max-height: 640px;
+    }
+
+    .screenshot-frame img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 10px;
+    }
+
+    .screenshot-card h3 {
+      margin: 0 0 0.4rem;
+      font-size: 0.9rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #e7f4ff;
+    }
+
+    .screenshot-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+      margin-top: 1.65rem;
+    }
+
+    .step {
+      position: relative;
+      padding: 1.25rem;
+      border-radius: var(--radius-sm);
+      background: rgba(9, 17, 28, 0.74);
+      border: 1px solid var(--line-strong);
+      overflow: hidden;
+    }
+
+    .step::after {
+      content: "";
+      position: absolute;
+      left: 1.25rem;
+      right: 1.25rem;
+      top: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--orange), var(--blue));
+    }
+
+    .step-index {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      margin-bottom: 0.85rem;
+      border-radius: 999px;
+      background: rgba(33, 145, 255, 0.15);
+      border: 1px solid rgba(137, 206, 255, 0.18);
+      color: var(--blue-soft);
+      font-family: "Orbitron", sans-serif;
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    .step h3 {
+      margin: 0 0 0.45rem;
+      font-size: 1rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.58;
+      font-size: 0.95rem;
+    }
+
+    .download-panel {
+      margin-top: 1.45rem;
+      padding: 1.6rem;
+      border-radius: 22px;
+      background:
+        linear-gradient(135deg, rgba(33, 145, 255, 0.14), rgba(255, 107, 0, 0.1)),
+        linear-gradient(180deg, rgba(10, 18, 31, 0.98), rgba(12, 20, 33, 0.94));
+      border: 1px solid rgba(137, 206, 255, 0.2);
+      box-shadow: var(--shadow-blue);
+    }
+
+    .download-top {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .download-top h3 {
+      margin: 0 0 0.45rem;
+      font-size: 1.18rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .download-top p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .release-meta {
+      margin-top: 0.95rem;
+      color: #d4e5f8;
+      font-size: 0.87rem;
+      line-height: 1.5;
+    }
+
+    .release-meta strong {
+      color: #e9f4ff;
+    }
+
+    .release-meta.is-loading strong {
+      color: var(--blue-soft);
+    }
+
+    .release-meta.is-ready strong {
+      color: #98f3c2;
+    }
+
+    .release-meta.is-fallback strong {
+      color: #ffd8bd;
+    }
+
+    .setup-notice {
+      margin-top: 1.1rem;
+      padding: 1rem 1.1rem;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 177, 115, 0.35);
+      background: linear-gradient(135deg, rgba(255, 107, 0, 0.12), rgba(255, 107, 0, 0.05));
+    }
+
+    .setup-notice h4 {
+      margin: 0 0 0.45rem;
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #ffd3ad;
+    }
+
+    .setup-notice ol {
+      margin: 0;
+      padding-left: 1.1rem;
+      color: #f2dcc9;
+      line-height: 1.65;
+    }
+
+    .setup-notice code {
+      color: #fff0e1;
+      background: rgba(0, 0, 0, 0.22);
+      padding: 0.08rem 0.35rem;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .setup-help {
+      margin-top: 0.7rem;
+      font-size: 0.88rem;
+      color: #f8dbc5;
+    }
+
+    .setup-help a {
+      color: #ffe9d8;
+      text-decoration: underline;
+      text-decoration-color: rgba(255, 233, 216, 0.55);
+      text-underline-offset: 3px;
+    }
+
+    .footer {
+      padding: 0 0 2rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .footer-line {
+      height: 1px;
+      margin-bottom: 1rem;
+      background: linear-gradient(90deg, transparent, rgba(33, 145, 255, 0.72), rgba(255, 107, 0, 0.68), transparent);
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid,
+      .section-head,
+      .grid-3,
+      .steps,
+      .download-top {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 1100px) {
+      .screenshots-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
+      }
+
+      .screenshot-card.featured {
+        grid-row: span 2;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .topbar-inner {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .nav,
+      .cta-row,
+      .meta-row {
+        width: 100%;
+      }
+
+      .topbar-download {
+        width: 100%;
+      }
+
+      .preview-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        padding-top: 3.5rem;
+      }
+
+      .hero p,
+      .section p.lead,
+      .cta-panel p {
+        font-size: 0.98rem;
+      }
+
+      .screenshots-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .screenshot-card.featured {
+        grid-row: auto;
+      }
+
+      #download,
+      a[href="#download"],
+      .topbar-download,
+      #download-installer {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="container topbar-inner">
+        <div class="brand">
+          <div class="brand-mark">
+            <img src="../frontend/favicon.svg" alt="Rocket League RPC logo">
+          </div>
+          <div class="brand-copy">
+            <strong>Rocket League RPC</strong>
+            <span>Open source Rich Presence app</span>
+          </div>
+        </div>
+        <nav class="nav" aria-label="Primary">
+          <a href="#features">Features</a>
+          <a href="#screenshots">Screenshots</a>
+          <a href="#how-it-works">How it works</a>
+          <a href="#download">Download</a>
+          <a class="button button-primary topbar-download" href="#download">Download for Windows</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <div class="hero-eyebrow">Rocket League Rich Presence</div>
+            <h1>
+              Show your <span>live match</span> on Discord.
+            </h1>
+            <p>
+              Rocket League RPC turns match data into a clean Discord Rich Presence while you play on Windows.
+            </p>
+            <div class="cta-row">
+              <a class="button button-primary" href="#download">Download for Windows</a>
+              <a class="button button-secondary" href="https://github.com/manucabral/RocketLeagueRPC/" target="_blank" rel="noreferrer">View on GitHub</a>
+            </div>
+            <div class="trust-row" aria-label="Trust signals">
+              <span class="trust-pill">Open source</span>
+              <span class="trust-pill">Windows</span>
+              <span class="trust-pill">Installer included</span>
+              <span class="trust-pill">Steam/Epic supported</span>
+            </div>
+            <div class="hero-note">Source code, issues, and contributions are available on GitHub.</div>
+          </div>
+
+          <aside class="preview" aria-label="Discord Rich Presence preview">
+            <div class="preview-top">
+              <div class="preview-head">Presence preview</div>
+              <div class="status-badge">Live</div>
+            </div>
+
+            <div class="discord-card">
+              <div class="discord-row">
+                <div class="discord-icon">
+                  <img
+                    id="preview-large-image"
+                    class="large-image"
+                    src="./assets/default-logo.webp"
+                    alt="Large Discord presence asset"
+                  >
+                  <img
+                    id="preview-small-image"
+                    class="small-image"
+                    src="./assets/steam.png"
+                    alt="Small Discord presence asset"
+                  >
+                  <div class="small-tooltip">
+                    <strong>manucabral</strong>
+                    <span class="tooltip-platform">Steam</span>
+                    <div class="tooltip-line"></div>
+                    <span>520 Score</span>
+                    <span>5 Shots</span>
+                  </div>
+                </div>
+                <div class="discord-copy">
+                  <strong>Rocket League</strong>
+                  <p class="accent">DFH Stadium</p>
+                  <p>2v2 Doubles</p>
+                  <p>Overtime · 84s elapsed</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="preview-strip">
+              <div class="preview-item">
+                <small>Tracker</small>
+                <strong>Connected</strong>
+              </div>
+              <div class="preview-item">
+                <small>Discord RPC</small>
+                <strong>Synced</strong>
+              </div>
+              <div class="preview-item">
+                <small>Presets</small>
+                <strong>Ready</strong>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" id="features">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Features</p>
+              <h2>Built for live play</h2>
+            </div>
+            <p class="lead">
+              Keep Discord aligned with the match without babysitting another window.
+            </p>
+          </div>
+
+          <div class="grid-3">
+            <article class="card feature-card">
+              <div class="feature-index">01 / Live</div>
+              <div>
+                <h3>Match updates</h3>
+                <p>Show arena, mode, timer, score, and status in real time.</p>
+              </div>
+            </article>
+            <article class="card feature-card">
+              <div class="feature-index">02 / Control</div>
+              <div>
+                <h3>Custom fields</h3>
+                <p>Choose exactly what appears in your presence.</p>
+              </div>
+            </article>
+            <article class="card feature-card">
+              <div class="feature-index">03 / Presets</div>
+              <div>
+                <h3>Saved setups</h3>
+                <p>Save multiple setups and switch quickly.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-alt" id="screenshots">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">App preview</p>
+              <h2>See the app in action</h2>
+            </div>
+            <p class="lead">
+              Home gets the spotlight, while field selection and live match views stay readable at their natural proportions.
+            </p>
+          </div>
+
+          <div class="screenshots-grid">
+            <article class="screenshot-card featured">
+              <div class="screenshot-frame">
+                <div class="screenshot-chrome" aria-hidden="true">
+                  <span class="screenshot-dot is-orange"></span>
+                  <span class="screenshot-dot is-blue"></span>
+                  <span class="screenshot-dot"></span>
+                </div>
+                <div class="screenshot-media">
+                  <img
+                    src="./assets/home.png"
+                    alt="Main home screen of the Rocket League RPC app"
+                    loading="lazy"
+                    decoding="async"
+                  >
+                </div>
+              </div>
+              <h3>Home</h3>
+              <p>Start from the main dashboard and access your core RPC controls.</p>
+            </article>
+            <article class="screenshot-card">
+              <div class="screenshot-frame">
+                <div class="screenshot-chrome" aria-hidden="true">
+                  <span class="screenshot-dot is-orange"></span>
+                  <span class="screenshot-dot is-blue"></span>
+                  <span class="screenshot-dot"></span>
+                </div>
+                <div class="screenshot-media">
+                  <img
+                    src="./assets/choose-fields.png"
+                    alt="Options to choose which presence fields are shown"
+                    loading="lazy"
+                    decoding="async"
+                  >
+                </div>
+              </div>
+              <h3>Choose fields</h3>
+              <p>Pick exactly which details appear in your Discord Rich Presence.</p>
+            </article>
+            <article class="screenshot-card">
+              <div class="screenshot-frame">
+                <div class="screenshot-chrome" aria-hidden="true">
+                  <span class="screenshot-dot is-orange"></span>
+                  <span class="screenshot-dot is-blue"></span>
+                  <span class="screenshot-dot"></span>
+                </div>
+                <div class="screenshot-media">
+                  <img
+                    src="./assets/live-match.png"
+                    alt="Live Rocket League match view with updated presence details"
+                    loading="lazy"
+                    decoding="async"
+                  >
+                </div>
+              </div>
+              <h3>Live match</h3>
+              <p>See real-time match information reflected instantly on your status.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="how-it-works">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">How it works</p>
+              <h2>From match to status</h2>
+            </div>
+            <p class="lead">
+              Read match state, format the presence, and update Discord automatically.
+            </p>
+          </div>
+
+          <div class="steps">
+            <article class="step">
+              <div class="step-index">01</div>
+              <h3>Track</h3>
+              <p>Listen for Rocket League state changes and match events.</p>
+            </article>
+            <article class="step">
+              <div class="step-index">02</div>
+              <h3>Format</h3>
+              <p>Choose which details should appear in your presence.</p>
+            </article>
+            <article class="step">
+              <div class="step-index">03</div>
+              <h3>Publish</h3>
+              <p>Update Discord while you play.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="download">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Get started</p>
+              <h2>Download</h2>
+            </div>
+            <p class="lead">
+              Install the app, connect Discord, and start playing.
+            </p>
+          </div>
+
+          <div class="download-panel">
+            <div class="download-top">
+              <div>
+                <h3>Installer</h3>
+                <p>Install Rocket League RPC on Windows in minutes.</p>
+              </div>
+              <div class="cta-row" style="margin-top:0;">
+                <a
+                  class="button button-primary"
+                  id="download-installer"
+                  href="https://github.com/manucabral/RocketLeagueRPC/releases/latest"
+                >Download Installer</a>
+                <a class="button button-tertiary" href="https://github.com/manucabral/RocketLeagueRPC/" target="_blank" rel="noreferrer">Source</a>
+              </div>
+            </div>
+            <p class="release-meta is-loading" id="release-meta" aria-live="polite">
+              <strong>Checking latest release...</strong>
+            </p>
+
+            <div class="grid-3">
+              <article class="card">
+                <h3>Install</h3>
+                <p>Quick setup with the Windows installer.</p>
+              </article>
+              <article class="card">
+                <h3>Connect</h3>
+                <p>Open the app and connect Discord Rich Presence.</p>
+              </article>
+              <article class="card">
+                <h3>Play</h3>
+                <p>Let the app update your presence while you play.</p>
+              </article>
+            </div>
+
+            <div class="setup-notice" role="note" aria-label="Required setup before using the app">
+              <h4>Before you launch</h4>
+              <ol>
+                <li>Open <code>&lt;Install Dir&gt;\TAGame\Config\DefaultStatsAPI.ini</code>.</li>
+                <li>Enable the Rocket League Stats API.</li>
+                <li>Save the file and restart the game.</li>
+              </ol>
+              <p class="setup-help">
+                Need help? Check
+                <a href="https://github.com/manucabral/RocketLeagueRPC/issues" target="_blank" rel="noreferrer">issues</a>
+                or
+                <a href="https://github.com/manucabral/RocketLeagueRPC/discussions" target="_blank" rel="noreferrer">discussions</a>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-alt" id="developers">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Developers</p>
+              <h2>GitHub</h2>
+            </div>
+            <p class="lead">
+              Source code, issues, and contributions live in the repository.
+            </p>
+          </div>
+
+          <div class="grid-3">
+            <article class="card">
+              <h3>Source code</h3>
+              <p>Review the implementation and project structure.</p>
+            </article>
+            <article class="card">
+              <h3>Contributions</h3>
+              <p>Open issues and contribute fixes or improvements.</p>
+            </article>
+            <article class="card">
+              <h3>Project page</h3>
+              <p>Use GitHub as the main place for development and updates.</p>
+            </article>
+          </div>
+          <div class="cta-row" style="margin-top:1.25rem;">
+            <a class="button button-tertiary" href="https://github.com/manucabral/RocketLeagueRPC/" target="_blank" rel="noreferrer">Open repository</a>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-line"></div>
+        <div>Rocket League RPC - Open source Windows app for Discord Rich Presence</div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    (() => {
+      const largeImage = document.getElementById("preview-large-image");
+      const smallImage = document.getElementById("preview-small-image");
+      const downloadInstaller = document.getElementById("download-installer");
+      const releaseMeta = document.getElementById("release-meta");
+      const largeImages = [
+        "./assets/default-logo.webp",
+        "./assets/rpc-logo.webp"
+      ];
+      const smallImages = [
+        "./assets/steam.png",
+        "./assets/epic.png"
+      ];
+      let index = 0;
+
+      setInterval(() => {
+        index = (index + 1) % largeImages.length;
+        largeImage.src = largeImages[index];
+        smallImage.src = smallImages[index % smallImages.length];
+      }, 2200);
+
+      const formatReleaseDate = (dateString) => {
+        if (!dateString) {
+          return null;
+        }
+        const date = new Date(dateString);
+        if (Number.isNaN(date.getTime())) {
+          return null;
+        }
+        return new Intl.DateTimeFormat("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric"
+        }).format(date);
+      };
+
+      if (downloadInstaller) {
+        const latestReleaseApi = "https://api.github.com/repos/manucabral/RocketLeagueRPC/releases/latest";
+        fetch(latestReleaseApi)
+          .then((response) => (response.ok ? response.json() : Promise.reject(new Error("release fetch failed"))))
+          .then((release) => {
+            if (!release || !Array.isArray(release.assets)) {
+              throw new Error("invalid release payload");
+            }
+
+            const installerAsset = release.assets.find((asset) =>
+              typeof asset?.name === "string" && asset.name.toLowerCase().endsWith(".exe")
+            );
+            if (installerAsset?.browser_download_url) {
+              downloadInstaller.href = installerAsset.browser_download_url;
+            }
+
+            if (releaseMeta) {
+              const releaseTag = release.tag_name || "latest";
+              const publishedDate = formatReleaseDate(release.published_at);
+              const dateLabel = publishedDate ? ` · Published ${publishedDate}` : "";
+              const sourceLabel = installerAsset?.browser_download_url ? "Direct .exe ready" : "Release page ready";
+              releaseMeta.className = "release-meta is-ready";
+              releaseMeta.innerHTML = `<strong>${sourceLabel}</strong> · ${releaseTag}${dateLabel}`;
+            }
+          })
+          .catch(() => {
+            if (releaseMeta) {
+              releaseMeta.className = "release-meta is-fallback";
+              releaseMeta.innerHTML = "<strong>Using fallback release page.</strong> GitHub API unavailable right now.";
+            }
+          });
+      }
+    })();
+  </script>
+</body>
+</html>
