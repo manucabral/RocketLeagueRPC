@@ -1,13 +1,10 @@
-"""
-Logging setup and utilities.
-"""
-
 import logging
 import sys
 from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger("rocketleaguerpc")
+LOG_LEVEL_NAMES = ("DEBUG", "INFO", "WARNING", "ERROR")
 
 
 def setup_logger(log_file: Optional[Path] = None, level: int = logging.INFO) -> None:
@@ -32,5 +29,12 @@ def setup_logger(log_file: Optional[Path] = None, level: int = logging.INFO) -> 
 
 def set_log_level(level_name: str) -> None:
     """Set the log level by name (e.g., 'DEBUG', 'INFO')."""
-    level = getattr(logging, level_name.upper(), logging.INFO)
+    level = getattr(logging, level_name.upper(), None)
+    if not isinstance(level, int):
+        level = logging.INFO
     logger.setLevel(level)
+
+
+def get_log_level() -> str:
+    """Return the current effective application log level name."""
+    return logging.getLevelName(logger.getEffectiveLevel())
