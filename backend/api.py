@@ -56,7 +56,7 @@ class Api:
         """Run the Discord IPC debug probe and return live state."""
         return self._coordinator.debug_discord_ipc()
 
-    def get_presence_config(self) -> dict[str, bool]:
+    def get_presence_config(self) -> dict[str, Any]:
         """Return the current presence feature-toggle configuration."""
         return self._coordinator.get_presence_config()
 
@@ -116,3 +116,19 @@ class Api:
     def get_live_state(self) -> dict[str, Any]:
         """Return the current aggregated live state from all backend services."""
         return self._coordinator.get_live_state()
+
+    def get_stats_api_status(self) -> dict[str, Any]:
+        """Return Rocket League StatsAPI configuration status."""
+        return self._coordinator.get_stats_api_status()
+
+    def set_stats_api_enabled(self, enabled: bool) -> dict[str, Any]:
+        """Enable or disable Rocket League StatsAPI when the config is found."""
+        return self._coordinator.set_stats_api_enabled(enabled)
+
+    def get_log_level(self) -> str:
+        """Return the current application log level."""
+        return self._coordinator.get_log_level()
+
+    def set_log_level(self, level_name: str) -> dict[str, Any]:
+        """Set application log verbosity and return live state."""
+        return self._coordinator.set_log_level(level_name)
