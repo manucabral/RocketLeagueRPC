@@ -1,3 +1,8 @@
+"""
+Logging setup and utilities.
+"""
+
+
 import logging
 import sys
 from pathlib import Path
